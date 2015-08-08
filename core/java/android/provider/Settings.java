@@ -5801,6 +5801,12 @@ public final class Settings {
         };
 
         /**
+         * Three Finger Gesture from Oppo
+         * @hide
+         */
+        public static final String SWIPE_TO_SCREENSHOT = "three_finger_gesture";
+
+        /**
          * These are all public system settings
          *
          * @hide
