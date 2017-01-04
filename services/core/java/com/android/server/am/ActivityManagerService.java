@@ -20298,7 +20298,8 @@ public class ActivityManagerService extends IActivityManager.Stub
         synchronized (this) {
             return mIsSwipeToScreenshotEnabled && SystemProperties.getBoolean("sys.android.screenshot", false);
         }
-    /**
+    }
+   /**
      * Deal with binder transactions to frozen apps.
      *
      * @param debugPid The binder transaction sender
