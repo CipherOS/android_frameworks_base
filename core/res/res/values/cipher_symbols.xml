@@ -26,4 +26,7 @@
     <java-symbol type="integer" name="config_deviceSupportsButtonBrightnessControl" />
     <java-symbol type="dimen" name="config_buttonBrightnessSettingDefaultFloat" />
 
+    <!-- Whether to allow process with media UID to access CameraServiceProxy -->
+    <java-symbol type="bool" name="config_allowMediaUidForCameraServiceProxy" />
+
 </resources>
