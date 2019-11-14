@@ -16,4 +16,11 @@
 
     <!-- Always on Display tile -->
     <string name="quick_settings_always_on_display_label">Always on display</string>
+
+    <!-- Name of the camera status bar icon. -->
+    <string name="status_bar_camera">Camera</string>
+    <!-- Name of the location status bar icon. -->
+    <string name="status_bar_location">Location</string>
+    <!-- Name of the microphone status bar icon. -->
+    <string name="status_bar_microphone">Microphone</string>
 </resources>
