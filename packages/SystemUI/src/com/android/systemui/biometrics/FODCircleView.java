@@ -386,6 +386,7 @@ public class FODCircleView extends ImageView {
         mPressedView.setImageResource(R.drawable.fod_icon_pressed);
 
         setImageDrawable(null);
+        updatePosition();
         invalidate();
     }
 
@@ -488,7 +489,7 @@ public class FODCircleView extends ImageView {
         mPressedParams.x = mParams.x = x;
         mPressedParams.y = mParams.y = y;
 
-        if (mIsDreaming) {
+        if (mIsDreaming && !mIsCircleShowing) {
             mParams.x += mDreamingOffsetX;
             mParams.y += mDreamingOffsetY;
         }
