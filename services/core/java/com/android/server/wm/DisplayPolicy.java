@@ -671,7 +671,16 @@ public class DisplayPolicy {
 
         if (mDisplayContent.isDefaultDisplay) {
             mHasStatusBar = true;
-            mHasNavigationBar = Utils.hasNavbarByDefault(mContext);
+            mHasNavigationBar = mContext.getResources().getBoolean(R.bool.config_showNavigationBar);
+
+            // Allow a system property to override this. Used by the emulator.
+            // See also hasNavigationBar().
+            String navBarOverride = SystemProperties.get("qemu.hw.mainkeys");
+            if ("1".equals(navBarOverride)) {
+                mHasNavigationBar = false;
+            } else if ("0".equals(navBarOverride)) {
+                mHasNavigationBar = true;
+            }
 
             // Register content observer only for main display
             mSettingsObserver = new SettingsObserver(mHandler);
@@ -721,7 +730,7 @@ public class DisplayPolicy {
         ContentResolver resolver = mContext.getContentResolver();
 
         mForceNavbar = LineageSettings.System.getIntForUser(resolver,
-                LineageSettings.System.FORCE_SHOW_NAVBAR, mHasNavigationBar ? 1 : 0,
+                LineageSettings.System.FORCE_SHOW_NAVBAR, 0,
                 UserHandle.USER_CURRENT);
     }
 

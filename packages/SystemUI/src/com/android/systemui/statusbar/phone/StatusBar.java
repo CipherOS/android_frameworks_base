@@ -876,6 +876,17 @@ public class StatusBar extends SystemUI implements DemoMode,
         mStatusBarStateController.addCallback(this,
                 SysuiStatusBarStateController.RANK_STATUS_BAR);
 
+        mNeedsNavigationBar = mContext.getResources().getBoolean(
+                com.android.internal.R.bool.config_showNavigationBar);
+        // Allow a system property to override this. Used by the emulator.
+        // See also hasNavigationBar().
+        String navBarOverride = SystemProperties.get("qemu.hw.mainkeys");
+        if ("1".equals(navBarOverride)) {
+            mNeedsNavigationBar = false;
+        } else if ("0".equals(navBarOverride)) {
+            mNeedsNavigationBar = true;
+        }
+
         mTunerService.addTunable(this, FORCE_SHOW_NAVBAR);
         mTunerService.addTunable(this, SCREEN_BRIGHTNESS_MODE);
         mTunerService.addTunable(this, STATUS_BAR_BRIGHTNESS_CONTROL);
@@ -4262,6 +4273,7 @@ public class StatusBar extends SystemUI implements DemoMode,
     private final DeviceProvisionedController mDeviceProvisionedController;
 
     private final NavigationBarController mNavigationBarController;
+    private boolean mNeedsNavigationBar;
 
     // UI-specific methods
 
@@ -4580,39 +4592,27 @@ public class StatusBar extends SystemUI implements DemoMode,
 
     @Override
     public void onTuningChanged(String key, String newValue) {
-        switch (key) {
-            case FORCE_SHOW_NAVBAR:
-                if (mDisplayId != Display.DEFAULT_DISPLAY ||
-                        mWindowManagerService == null)
-                    return;
-                boolean mNavbarVisible =
-                        TunerService.parseIntegerSwitch(newValue, Utils.hasNavbarByDefault(mContext));
-                boolean hasNavbar = getNavigationBarView() != null;
-                if (mNavbarVisible) {
-                    if (!hasNavbar) {
-                        try {
-                            mNavigationBarController.onDisplayReady(mDisplayId);
-                        } catch (Exception e) { }
-                    }
-                } else {
-                    if (hasNavbar) {
-                        try {
-                            mNavigationBarController.onDisplayRemoved(mDisplayId);
-                        } catch (Exception e) { }
-                    }
+        if (FORCE_SHOW_NAVBAR.equals(key) && mDisplayId == Display.DEFAULT_DISPLAY &&
+                mWindowManagerService != null) {
+            boolean forcedVisibility = mNeedsNavigationBar ||
+                    TunerService.parseIntegerSwitch(newValue, false);
+            boolean hasNavbar = getNavigationBarView() != null;
+            if (forcedVisibility) {
+                if (!hasNavbar) {
+                    mNavigationBarController.onDisplayReady(mDisplayId);
                 }
-                break;
-            case SCREEN_BRIGHTNESS_MODE:
-                mAutomaticBrightness = Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC ==
-                        TunerService.parseInteger(newValue,
-                                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
-                break;
-            case STATUS_BAR_BRIGHTNESS_CONTROL:
-                mBrightnessControl = TunerService.parseIntegerSwitch(newValue, false);
-                break;
-            default:
-                break;
-         }
+            } else {
+                if (hasNavbar) {
+                    mNavigationBarController.onDisplayRemoved(mDisplayId);
+                }
+            }
+        } else if (SCREEN_BRIGHTNESS_MODE.equals(key)) {
+            mAutomaticBrightness = Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC ==
+                    TunerService.parseInteger(newValue,
+                            Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+        } else if (STATUS_BAR_BRIGHTNESS_CONTROL.equals(key)) {
+            mBrightnessControl = TunerService.parseIntegerSwitch(newValue, false);
+        }
     }
     // End Extra BaseStatusBarMethods.
 
