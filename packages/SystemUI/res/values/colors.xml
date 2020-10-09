@@ -275,4 +275,9 @@
     <!-- volume panel -->
     <color name="default_volume_transparency">#CCFFFFFF</color>
     <color name="accent_volume_transparency">#66FFFFFF</color>
+
+    <!-- Clear all notifications button -->
+    <color name="dismiss_all_background_color">@*android:color/notification_material_background_color</color>
+    <color name="dismiss_all_background_color_ripple">#a8a8a8</color>
+    <color name="dismiss_all_icon_color">@*android:color/accent_device_default_light</color>
 </resources>
