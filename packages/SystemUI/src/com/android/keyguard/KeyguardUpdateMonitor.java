@@ -1880,7 +1880,8 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
             return;
         }
         mHandler.removeCallbacks(mRetryFingerprintAuthentication);
-        boolean shouldListenForFingerprint = shouldListenForFingerprint();
+        boolean hideFodForStrongAuth = mHasFod && userNeedsStrongAuth();
+        boolean shouldListenForFingerprint = !hideFodForStrongAuth && shouldListenForFingerprint();
         boolean runningOrRestarting = mFingerprintRunningState == BIOMETRIC_STATE_RUNNING
                 || mFingerprintRunningState == BIOMETRIC_STATE_CANCELLING_RESTARTING;
         if (runningOrRestarting && !shouldListenForFingerprint) {
