@@ -23,4 +23,8 @@
     <dimen name="net_traffic_multi_text_size">8dp</dimen>
     <dimen name="net_traffic_txt_img_padding">4dp</dimen>
 
+    <!-- Bolt Battery Icon -->
+    <dimen name="status_bar_battery_bolt_icon_height">13.5dp</dimen>
+    <dimen name="status_bar_battery_bolt_icon_width">9.7dp</dimen>
+
 </resources>
