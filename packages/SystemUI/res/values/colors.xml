@@ -271,4 +271,8 @@
     <color name="misalignment_text_color">#F28B82</color>
 
     <color name="screenrecord_status_color">#E94235</color>
+
+    <!-- volume panel -->
+    <color name="default_volume_transparency">#CCFFFFFF</color>
+    <color name="accent_volume_transparency">#66FFFFFF</color>
 </resources>
