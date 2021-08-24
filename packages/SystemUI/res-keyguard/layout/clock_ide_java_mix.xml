@@ -42,7 +42,7 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="monospace"
                 android:textColor="?attr/wallpaperTextColor"
-                android:text="org.lineage."
+                android:text="com.cipher."
                 android:textSize="12sp" />
 
             <TextView
