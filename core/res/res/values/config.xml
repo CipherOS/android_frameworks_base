@@ -4249,7 +4249,7 @@
     <!-- Wallpaper cropper package. Used as the default cropper if the active launcher doesn't
          handle wallpaper cropping.
     -->
-    <string name="config_wallpaperCropperPackage" translatable="false">com.android.wallpapercropper</string>
+    <string name="config_wallpaperCropperPackage" translatable="false">com.android.wallpaper</string>
 
     <!-- Wallpaper will get top app scheduling priority if this is set to true.
     -->
