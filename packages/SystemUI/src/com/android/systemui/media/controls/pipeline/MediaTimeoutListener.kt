@@ -32,6 +32,9 @@ import com.android.systemui.util.time.SystemClock
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+private const val DEBUG = false
+private const val TAG = "MediaTimeout"
+
 @VisibleForTesting
 val PAUSED_MEDIA_TIMEOUT =
     SystemProperties.getLong("debug.sysui.media_timeout", TimeUnit.MINUTES.toMillis(10))
