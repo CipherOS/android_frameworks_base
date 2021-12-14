@@ -38,6 +38,7 @@ import java.util.NoSuchElementException;
  */
 public abstract class BaseClientMonitor implements IBinder.DeathRecipient {
 
+
     private static final String TAG = "BaseClientMonitor";
     protected static final boolean DEBUG = true;
 
