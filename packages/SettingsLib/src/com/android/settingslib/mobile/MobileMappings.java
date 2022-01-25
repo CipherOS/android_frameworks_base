@@ -18,6 +18,8 @@ package com.android.settingslib.mobile;
 import android.content.Context;
 import android.content.res.Resources;
 import android.os.PersistableBundle;
+import android.os.UserHandle;
+import android.provider.Settings;
 import android.telephony.Annotation;
 import android.telephony.CarrierConfigManager;
 import android.telephony.SubscriptionManager;
