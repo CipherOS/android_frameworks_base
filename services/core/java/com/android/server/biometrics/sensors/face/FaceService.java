@@ -66,6 +66,7 @@ import com.android.server.biometrics.sensors.ClientMonitorCallbackConverter;
 import com.android.server.biometrics.sensors.LockoutResetDispatcher;
 import com.android.server.biometrics.sensors.LockoutTracker;
 import com.android.server.biometrics.sensors.face.aidl.FaceProvider;
+import com.android.server.biometrics.sensors.face.custom.CustomFaceProvider;
 import com.android.server.biometrics.sensors.face.hidl.Face10;
 
 import com.google.android.collect.Lists;
@@ -682,6 +683,12 @@ public class FaceService extends SystemService {
             return providers;
         }
 
+        private void addCustomProviders() {
+            if (CustomFaceProvider.useCustomFaceUnlockService()) {
+                getAidlProviders().add(new CustomFaceProvider(getContext(), new FaceSensorPropertiesInternal(CustomFaceProvider.DEVICE_ID, 0, 1, new ArrayList(), 1, false, false, false), mLockoutResetDispatcher));
+            }
+        }
+
         @android.annotation.EnforcePermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
         public void registerAuthenticators(
                 @NonNull List<FaceSensorPropertiesInternal> hidlSensors) {
@@ -700,6 +707,8 @@ public class FaceService extends SystemService {
                 final List<ServiceProvider> providers = new ArrayList<>();
                 providers.addAll(getHidlProviders(filteredInstances.first));
                 providers.addAll(getAidlProviders(filteredInstances.second));
+                providers.addAll(getAidlProviders());
+                addCustomProviders();
                 return providers;
             });
         }
