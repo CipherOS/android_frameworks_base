@@ -1024,7 +1024,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
 
         @Override
         public boolean showDuringKeyguard() {
-            return true;
+            return false;
         }
 
         @Override
@@ -1050,7 +1050,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
 
         @Override
         public boolean showDuringKeyguard() {
-            return true;
+            return false;
         }
 
         @Override
