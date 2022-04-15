@@ -815,16 +815,6 @@
         <item name="android:textColor">?android:attr/colorAccent</item>
     </style>
 
-    <style name="ChargingAnim.WallpaperBackground">
-        <item name="chargingAnimColor">?attr/wallpaperTextColorAccent</item>
-        <item name="android:textColor">?attr/wallpaperTextColorAccent</item>
-    </style>
-
-    <style name="ChargingAnim.DarkBackground">
-        <item name="chargingAnimColor">@*android:color/white</item>
-        <item name="android:textColor">@*android:color/white</item>
-    </style>
-
     <!-- Screen recording -->
     <style name="ScreenRecord" parent="@android:style/Theme.DeviceDefault.DayNight">
         <item name="android:windowNoTitle">true</item>
