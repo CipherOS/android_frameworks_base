@@ -470,26 +470,21 @@ public class QuickStatusBarHeader extends FrameLayout {
     /**
      * Sets the visibility of the separator between clock and icons.
      *
-     * This separator is "visible" when there is a center cutout, to block that space. In that
-     * case, the clock and the layout on the right (containing the icons and the battery meter) are
-     * set to weight 1 to take the available space.
-     * @param visible whether the separator between clock and icons should be visible.
+     * This separator is always "visible"
+     * @param visible gets ignored.
      */
     private void setSeparatorVisibility(boolean visible) {
-        int newVisibility = visible ? View.VISIBLE : View.GONE;
-        if (mClockIconsSeparator.getVisibility() == newVisibility) return;
-
-        mClockIconsSeparator.setVisibility(visible ? View.VISIBLE : View.GONE);
+        mClockIconsSeparator.setVisibility(View.VISIBLE);
 
         LinearLayout.LayoutParams lp =
                 (LinearLayout.LayoutParams) mClockContainer.getLayoutParams();
-        lp.width = visible ? 0 : WRAP_CONTENT;
-        lp.weight = visible ? 1f : 0f;
+        lp.width = 0;
+        lp.weight = 1f;
         mClockContainer.setLayoutParams(lp);
 
         lp = (LinearLayout.LayoutParams) mRightLayout.getLayoutParams();
-        lp.width = visible ? 0 : WRAP_CONTENT;
-        lp.weight = visible ? 1f : 0f;
+        lp.width = 0;
+        lp.weight = 1f;
         mRightLayout.setLayoutParams(lp);
     }
 
