@@ -50,11 +50,7 @@ class CustomizeTileView(
     }
 
     private fun getVisibilityState(text: CharSequence?): Int {
-        return if (showAppLabel && !TextUtils.isEmpty(text)) {
-            VISIBLE
-        } else {
-            GONE
-        }
+        return INVISIBLE
     }
 
     override fun animationsEnabled(): Boolean {

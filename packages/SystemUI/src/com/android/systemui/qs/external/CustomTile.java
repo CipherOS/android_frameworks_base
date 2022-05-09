@@ -413,13 +413,7 @@ public class CustomTile extends QSTileImpl<State> implements TileChangeListener 
             return null;
         };
         state.label = mTile.getLabel();
-
-        CharSequence subtitle = mTile.getSubtitle();
-        if (subtitle != null && subtitle.length() > 0) {
-            state.secondaryLabel = subtitle;
-        } else {
-            state.secondaryLabel = null;
-        }
+        state.secondaryLabel = null;
 
         if (mTile.getContentDescription() != null) {
             state.contentDescription = mTile.getContentDescription();
