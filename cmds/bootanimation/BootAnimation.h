@@ -213,8 +213,6 @@ private:
     Texture     mAndroid[2];
     int         mWidth;
     int         mHeight;
-    int         mInitWidth;
-    int         mInitHeight;
     int         mMaxWidth = 0;
     int         mMaxHeight = 0;
     int         mCurrentInset;
