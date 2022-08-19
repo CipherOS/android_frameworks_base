@@ -1425,17 +1425,12 @@ void BootAnimation::drawTexturedQuad(float xStart, float yStart, float width, fl
 
 void BootAnimation::initDynamicColors() {
     for (int i = 0; i < DYNAMIC_COLOR_COUNT; i++) {
-        const auto syspropName = "persist.bootanim.color" + std::to_string(i + 1);
-        const auto syspropValue = android::base::GetProperty(syspropName, "");
-        if (syspropValue != "") {
-            SLOGI("Loaded dynamic color: %s -> %s", syspropName.c_str(), syspropValue.c_str());
-            mDynamicColorsApplied = true;
-        }
-        parseColorDecimalString(syspropValue,
+        parseColorDecimalString(
+            android::base::GetProperty("persist.bootanim.color" + std::to_string(i + 1), ""),
             mAnimation->endColors[i], mAnimation->startColors[i]);
     }
     glUseProgram(mImageShader);
-    SLOGI("Dynamically coloring boot animation. Sysprops loaded? %i", mDynamicColorsApplied);
+    SLOGI("[BootAnimation] Dynamically coloring boot animation.");
     for (int i = 0; i < DYNAMIC_COLOR_COUNT; i++) {
         float *startColor = mAnimation->startColors[i];
         float *endColor = mAnimation->endColors[i];
@@ -1468,11 +1463,6 @@ bool BootAnimation::playAnimation(const Animation& animation) {
             if (exitPending())
                 break;
             continue; //to next part
-        }
-
-        if (animation.dynamicColoringEnabled && part.useDynamicColoring && !mDynamicColorsApplied) {
-            SLOGD("Trying to load dynamic color sysprops.");
-            initDynamicColors();
         }
 
         // process the part not only while the count allows but also if already fading
