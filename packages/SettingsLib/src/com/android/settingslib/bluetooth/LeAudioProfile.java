@@ -45,7 +45,7 @@ import java.util.List;
 
 public class LeAudioProfile implements LocalBluetoothProfile {
     private static final String TAG = "LeAudioProfile";
-    private static boolean DEBUG = true;
+    private static boolean DEBUG = false;
 
     private Context mContext;
 
