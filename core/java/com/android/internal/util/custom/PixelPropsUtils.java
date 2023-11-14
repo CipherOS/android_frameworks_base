@@ -197,18 +197,18 @@ public class PixelPropsUtils {
                 if (was) return true;
 
                 dlog("Spoofing build for GMS");
-                // Alter build parameters to pixel 2 for avoiding hardware attestation enforcement
-                setBuildField("BRAND", "google");
-                setBuildField("PRODUCT", "walleye");
-                setBuildField("MODEL", "Pixel 2");
-                setBuildField("MANUFACTURER", "Google");
-                setBuildField("DEVICE", "walleye");
-                setBuildField("FINGERPRINT", "google/walleye/walleye:8.1.0/OPM1.171019.011/4448085:user/release-keys");
-                setBuildField("ID", "OPM1.171019.011");
+                // Spoof to xiaomi tiare to avoid hardware attestation, also bypasses play integrity
+                setBuildField("BRAND", "Xiaomi");
+                setBuildField("PRODUCT", "tiare");
+                setBuildField("MODEL", "Redmi Go");
+                setBuildField("MANUFACTURER", "Xiaomi");
+                setBuildField("DEVICE", "tiare");
+                setBuildField("FINGERPRINT", "Xiaomi/tiare_in/tiare:8.1.0/OPM1.171019.026/V10.2.19.0.OCLINXM:user/release-keys");
+                setBuildField("ID", "OPM1.171019.026");
                 setBuildField("TYPE", "user");
                 setBuildField("TAGS", "release-keys");
                 setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.O_MR1);
-                setVersionField("SECURITY_PATCH", "2017-12-05");
+                setVersionField("SECURITY_PATCH", "2021-01-05");
                 return true;
             }
         }
