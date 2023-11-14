@@ -58,7 +58,7 @@ public class PixelPropsUtils {
 
     private static final Map<String, Object> propsToChangeQcomPixel =
             createGoogleSpoofProps("barbet", "Pixel 5a",
-                    "google/barbet/barbet:14/UP1A.231005.007/10754064:user/release-keys");
+                    "google/barbet/barbet:14/UP1A.231105.001/10817346:user/release-keys");
 
     private static final Map<String, ArrayList<String>> propsToKeep;
 
