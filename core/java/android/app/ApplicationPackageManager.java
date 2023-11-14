@@ -835,7 +835,7 @@ public class ApplicationPackageManager extends PackageManager {
     @Override
     public boolean hasSystemFeature(String name, int version) {
         if (name != null && Arrays.asList(featuresTensor).contains(name) &&
-                !Arrays.asList(pTensorCodenames).contains(SystemProperties.get("org.pixelexperience.device"))) {
+                !Arrays.asList(pTensorCodenames).contains(SystemProperties.get("ro.cipher.device"))) {
             return false;
         }
         return mHasSystemFeatureCache.query(new HasSystemFeatureQuery(name, version));
