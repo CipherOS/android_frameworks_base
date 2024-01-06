@@ -41,6 +41,7 @@ import static com.android.os.AtomsProto.PackageNotificationChannelPreferences.IS
 import static com.android.os.AtomsProto.PackageNotificationChannelPreferences.UID_FIELD_NUMBER;
 import static com.android.server.notification.PreferencesHelper.DEFAULT_BUBBLE_PREFERENCE;
 import static com.android.server.notification.PreferencesHelper.NOTIFICATION_CHANNEL_COUNT_LIMIT;
+import static com.android.server.notification.PreferencesHelper.NOTIFICATION_CHANNEL_GROUP_COUNT_LIMIT;
 import static com.android.server.notification.PreferencesHelper.UNKNOWN_UID;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -2133,6 +2134,19 @@ public class PreferencesHelperTest extends UiServiceTestCase {
     }
 
     @Test
+    public void testIsGroupBlocked_appCannotCreateAsBlocked() throws Exception {
+        NotificationChannelGroup group = new NotificationChannelGroup("id", "name");
+        group.setBlocked(true);
+        mHelper.createNotificationChannelGroup(PKG_N_MR1, UID_N_MR1, group, true);
+        assertFalse(mHelper.isGroupBlocked(PKG_N_MR1, UID_N_MR1, group.getId()));
+
+        NotificationChannelGroup group3 = group.clone();
+        group3.setBlocked(false);
+        mHelper.createNotificationChannelGroup(PKG_N_MR1, UID_N_MR1, group3, true);
+        assertFalse(mHelper.isGroupBlocked(PKG_N_MR1, UID_N_MR1, group.getId()));
+    }
+
+    @Test
     public void testIsGroup_appCannotResetBlock() throws Exception {
         NotificationChannelGroup group = new NotificationChannelGroup("id", "name");
         mHelper.createNotificationChannelGroup(PKG_N_MR1, UID_N_MR1, group, true);
@@ -3062,6 +3076,52 @@ public class PreferencesHelperTest extends UiServiceTestCase {
     }
 
     @Test
+    public void testTooManyGroups() {
+        for (int i = 0; i < NOTIFICATION_CHANNEL_GROUP_COUNT_LIMIT; i++) {
+            NotificationChannelGroup group = new NotificationChannelGroup(String.valueOf(i),
+                    String.valueOf(i));
+            mHelper.createNotificationChannelGroup(PKG_O, UID_O, group, true);
+        }
+        try {
+            NotificationChannelGroup group = new NotificationChannelGroup(
+                    String.valueOf(NOTIFICATION_CHANNEL_GROUP_COUNT_LIMIT),
+                    String.valueOf(NOTIFICATION_CHANNEL_GROUP_COUNT_LIMIT));
+            mHelper.createNotificationChannelGroup(PKG_O, UID_O, group, true);
+            fail("Allowed to create too many notification channel groups");
+        } catch (IllegalStateException e) {
+            // great
+        }
+    }
+
+    @Test
+    public void testTooManyGroups_xml() throws Exception {
+        String extraGroup = "EXTRA";
+        String extraGroup1 = "EXTRA1";
+
+        // create first... many... directly so we don't need a big xml blob in this test
+        for (int i = 0; i < NOTIFICATION_CHANNEL_GROUP_COUNT_LIMIT; i++) {
+            NotificationChannelGroup group = new NotificationChannelGroup(String.valueOf(i),
+                    String.valueOf(i));
+            mHelper.createNotificationChannelGroup(PKG_O, UID_O, group, true);
+        }
+
+        final String xml = "<ranking version=\"1\">\n"
+                + "<package name=\"" + PKG_O + "\" uid=\"" + UID_O + "\" >\n"
+                + "<channelGroup id=\"" + extraGroup + "\" name=\"hi\"/>"
+                + "<channelGroup id=\"" + extraGroup1 + "\" name=\"hi2\"/>"
+                + "</package>"
+                + "</ranking>";
+        XmlPullParser parser = Xml.newPullParser();
+        parser.setInput(new BufferedInputStream(new ByteArrayInputStream(xml.getBytes())),
+                null);
+        parser.nextTag();
+        mHelper.readXml(parser, false, UserHandle.USER_ALL);
+
+        assertNull(mHelper.getNotificationChannelGroup(extraGroup, PKG_O, UID_O));
+        assertNull(mHelper.getNotificationChannelGroup(extraGroup1, PKG_O, UID_O));
+    }
+
+    @Test
     public void testRestoreMultiUser() throws Exception {
         String pkg = "restore_pkg";
         String channelId = "channelId";
@@ -3402,7 +3462,7 @@ public class PreferencesHelperTest extends UiServiceTestCase {
     public void testGetConversations_noDisabledGroups() {
         NotificationChannelGroup group = new NotificationChannelGroup("a", "a");
         group.setBlocked(true);
-        mHelper.createNotificationChannelGroup(PKG_O, UID_O, group, true);
+        mHelper.createNotificationChannelGroup(PKG_O, UID_O, group, false);
         NotificationChannel parent = new NotificationChannel("parent", "p", 1);
         mHelper.createNotificationChannel(PKG_O, UID_O, parent, true, false);
 

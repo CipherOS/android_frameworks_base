@@ -19,6 +19,7 @@ package android.app.admin;
 import static com.android.internal.util.function.pooled.PooledLambda.obtainMessage;
 
 import android.Manifest.permission;
+import android.accounts.Account;
 import android.annotation.CallbackExecutor;
 import android.annotation.ColorInt;
 import android.annotation.IntDef;
@@ -150,6 +151,27 @@ public class DevicePolicyManager {
     /** @hide */
     public DevicePolicyManager(Context context, IDevicePolicyManager service) {
         this(context, service, false);
+    }
+
+    /**
+     * Called when a managed profile has been provisioned.
+     *
+     * @throws SecurityException if the caller does not hold
+     * {@link android.Manifest.permission#MANAGE_PROFILE_AND_DEVICE_OWNERS}.
+     * @hide
+     */
+    @RequiresPermission(android.Manifest.permission.MANAGE_PROFILE_AND_DEVICE_OWNERS)
+    public void finalizeWorkProfileProvisioning(
+            @NonNull UserHandle managedProfileUser, @Nullable Account migratedAccount) {
+        Objects.requireNonNull(managedProfileUser, "managedProfileUser can't be null");
+        if (mService == null) {
+            throw new IllegalStateException("Could not find DevicePolicyManagerService");
+        }
+        try {
+            mService.finalizeWorkProfileProvisioning(managedProfileUser, migratedAccount);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
     }
 
     /** @hide */
@@ -9639,6 +9661,15 @@ public class DevicePolicyManager {
      * {@link android.os.Build.VERSION_CODES#M} the app-op matching the permission is set to
      * {@link android.app.AppOpsManager#MODE_IGNORED}, but the permission stays granted.
      *
+     * Control over the following permissions are restricted for managed profile owners:
+     * <ul>
+     *  <li>Manifest.permission.READ_SMS</li>
+     * </ul>
+     * <p>
+     * A managed profile owner may not grant these permissions (i.e. call this method with any of
+     * the permissions listed above and {@code grantState} of
+     * {@code #PERMISSION_GRANT_STATE_GRANTED}), but may deny them.
+     *
      * @param admin Which profile or device owner this request is associated with.
      * @param packageName The application to grant or revoke a permission to.
      * @param permission The permission to grant or revoke.
@@ -9876,7 +9907,8 @@ public class DevicePolicyManager {
 
     /**
      * Called by a device admin to set the long support message. This will be displayed to the user
-     * in the device administators settings screen.
+     * in the device administrators settings screen. If the message is longer than 20000 characters
+     * it may be truncated.
      * <p>
      * If the long support message needs to be localized, it is the responsibility of the
      * {@link DeviceAdminReceiver} to listen to the {@link Intent#ACTION_LOCALE_CHANGED} broadcast
@@ -11965,7 +11997,8 @@ public class DevicePolicyManager {
 
     /**
      * Called by Device owner to disable user control over apps. User will not be able to clear
-     * app data or force-stop packages.
+     * app data or force-stop packages. Packages with user control disabled are exempted from
+     * App Standby Buckets.
      *
      * @param admin which {@link DeviceAdminReceiver} this request is associated with
      * @param packages The package names for the apps.

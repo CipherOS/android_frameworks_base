@@ -23,6 +23,7 @@ import static android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL
 import static android.app.ActivityManager.LOCK_TASK_MODE_NONE;
 import static android.app.admin.DeviceAdminReceiver.EXTRA_TRANSFER_OWNERSHIP_ADMIN_EXTRAS_BUNDLE;
 import static android.app.admin.DevicePolicyManager.ACTION_CHECK_POLICY_COMPLIANCE;
+import static android.app.admin.DevicePolicyManager.ACTION_MANAGED_PROFILE_PROVISIONED;
 import static android.app.admin.DevicePolicyManager.ACTION_PROVISION_MANAGED_USER;
 import static android.app.admin.DevicePolicyManager.CODE_ACCOUNTS_NOT_EMPTY;
 import static android.app.admin.DevicePolicyManager.CODE_CANNOT_ADD_MANAGED_PROFILE;
@@ -50,6 +51,7 @@ import static android.app.admin.DevicePolicyManager.DELEGATION_NETWORK_LOGGING;
 import static android.app.admin.DevicePolicyManager.DELEGATION_PACKAGE_ACCESS;
 import static android.app.admin.DevicePolicyManager.DELEGATION_PERMISSION_GRANT;
 import static android.app.admin.DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE_PER_USER;
+import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_ACCOUNT_TO_MIGRATE;
 import static android.app.admin.DevicePolicyManager.ID_TYPE_BASE_INFO;
 import static android.app.admin.DevicePolicyManager.ID_TYPE_IMEI;
 import static android.app.admin.DevicePolicyManager.ID_TYPE_INDIVIDUAL_ATTESTATION;
@@ -319,6 +321,7 @@ import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.time.LocalDate;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -330,6 +333,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -402,6 +406,15 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
     private static final int REQUEST_EXPIRE_PASSWORD = 5571;
 
     private static final int REQUEST_PROFILE_OFF_DEADLINE = 5572;
+
+    // Binary XML serializer doesn't support longer strings
+    private static final int MAX_POLICY_STRING_LENGTH = 65535;
+    // FrameworkParsingPackageUtils#MAX_FILE_NAME_SIZE, Android packages are used in dir names.
+    private static final int MAX_PACKAGE_NAME_LENGTH = 223;
+
+    private static final int MAX_LONG_SUPPORT_MESSAGE_LENGTH = 20000;
+    private static final int MAX_SHORT_SUPPORT_MESSAGE_LENGTH = 200;
+    private static final int MAX_ORG_NAME_LENGTH = 200;
 
     private static final long MS_PER_DAY = TimeUnit.DAYS.toMillis(1);
 
@@ -4019,7 +4032,9 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         updateMaximumTimeToLockLocked(userHandle);
         updateLockTaskPackagesLocked(policy.mLockTaskPackages, userHandle);
         updateLockTaskFeaturesLocked(policy.mLockTaskFeatures, userHandle);
-        updateUserControlDisabledPackagesLocked(policy.mUserControlDisabledPackages);
+        if (userHandle == UserHandle.USER_SYSTEM) {
+            updateUserControlDisabledPackagesLocked(policy.mUserControlDisabledPackages);
+        }
         if (policy.mStatusBarDisabled) {
             setStatusBarDisabledInternal(policy.mStatusBarDisabled, userHandle);
         }
@@ -4047,6 +4062,8 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
 
     private void updateUserControlDisabledPackagesLocked(List<String> packages) {
         mInjector.getPackageManagerInternal().setDeviceOwnerProtectedPackages(packages);
+        mUsageStatsManagerInternal.setAdminProtectedPackages(
+                new ArraySet(packages), UserHandle.USER_ALL);
     }
 
     private void updateLockTaskFeaturesLocked(int flags, int userId) {
@@ -9424,6 +9441,9 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             final ComponentName doComponent = mOwners.getDeviceOwnerComponent();
             final ComponentName poComponent =
                     mOwners.getProfileOwnerComponent(userHandle.getIdentifier());
+            if (supervisorComponent == null) {
+                return null;
+            }
             if (supervisorComponent.equals(doComponent) || supervisorComponent.equals(
                     poComponent)) {
                 return supervisorComponent;
@@ -10114,6 +10134,12 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         }
         Objects.requireNonNull(admin, "admin is null");
         Objects.requireNonNull(agent, "agent is null");
+        enforceMaxPackageNameLength(agent.getPackageName());
+        final String agentAsString = agent.flattenToString();
+        enforceMaxStringLength(agentAsString, "agent name");
+        if (args != null) {
+            enforceMaxStringLength(args, "args");
+        }
         final int userHandle = UserHandle.getCallingUserId();
         synchronized (getLockObject()) {
             ActiveAdmin ap = getActiveAdminForCallerLocked(admin,
@@ -10332,6 +10358,10 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         Objects.requireNonNull(who, "ComponentName is null");
 
         if (packageList != null) {
+            for (String pkg : (List<String>) packageList) {
+                enforceMaxPackageNameLength(pkg);
+            }
+
             int userId = UserHandle.getCallingUserId();
             List<AccessibilityServiceInfo> enabledServices = null;
             long id = mInjector.binderClearCallingIdentity();
@@ -10483,6 +10513,10 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         Objects.requireNonNull(who, "ComponentName is null");
         final int callingUserId = mInjector.userHandleGetCallingUserId();
         if (packageList != null) {
+            for (String pkg : (List<String>) packageList) {
+                enforceMaxPackageNameLength(pkg);
+            }
+
             List<InputMethodInfo> enabledImes = InputMethodManagerInternal.get()
                     .getEnabledInputMethodListAsUser(callingUserId);
             if (enabledImes != null) {
@@ -10675,6 +10709,37 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                 saveSettingsLocked(userHandle);
             }
         }
+    }
+
+    @Override
+    public void finalizeWorkProfileProvisioning(UserHandle managedProfileUser,
+            Account migratedAccount) {
+        if (mContext.checkCallingOrSelfPermission(permission.MANAGE_PROFILE_AND_DEVICE_OWNERS)
+                != PackageManager.PERMISSION_GRANTED) {
+            throw new SecurityException("Calling identity is not authorized");
+        }
+
+        if (!isManagedProfile(managedProfileUser.getIdentifier())) {
+            throw new IllegalStateException("Given user is not a managed profile");
+        }
+        ComponentName profileOwnerComponent =
+                mOwners.getProfileOwnerComponent(managedProfileUser.getIdentifier());
+        if (profileOwnerComponent == null) {
+            throw new IllegalStateException("There is no profile owner on the given profile");
+        }
+        Intent primaryProfileSuccessIntent = new Intent(ACTION_MANAGED_PROFILE_PROVISIONED);
+        primaryProfileSuccessIntent.setPackage(profileOwnerComponent.getPackageName());
+        primaryProfileSuccessIntent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES
+                | Intent.FLAG_RECEIVER_FOREGROUND);
+        primaryProfileSuccessIntent.putExtra(Intent.EXTRA_USER, managedProfileUser);
+
+        if (migratedAccount != null) {
+            primaryProfileSuccessIntent.putExtra(EXTRA_PROVISIONING_ACCOUNT_TO_MIGRATE,
+                    migratedAccount);
+        }
+
+        mContext.sendBroadcastAsUser(primaryProfileSuccessIntent,
+                UserHandle.of(getProfileParentId(managedProfileUser.getIdentifier())));
     }
 
     @Override
@@ -11454,6 +11519,8 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             return;
         }
         Objects.requireNonNull(who, "ComponentName is null");
+        enforceMaxStringLength(accountType, "account type");
+
         synchronized (getLockObject()) {
             /*
              * When called on the parent DPM instance (parent == true), affects active admin
@@ -11800,6 +11867,9 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             throws SecurityException {
         Objects.requireNonNull(who, "ComponentName is null");
         Objects.requireNonNull(packages, "packages is null");
+        for (String pkg : packages) {
+            enforceMaxPackageNameLength(pkg);
+        }
 
         synchronized (getLockObject()) {
             enforceCanCallLockTaskLocked(who);
@@ -12507,6 +12577,13 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                     mWidgetProviderListeners.add(listener);
                 }
             }
+        }
+
+        @Override
+        public @Nullable ComponentName getProfileOwnerOrDeviceOwnerSupervisionComponent(
+                @NonNull UserHandle userHandle) {
+            return DevicePolicyManagerService.this.getProfileOwnerOrDeviceOwnerSupervisionComponent(
+                    userHandle);
         }
 
         @Override
@@ -13638,6 +13715,8 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             return;
         }
         Objects.requireNonNull(who, "ComponentName is null");
+        message = truncateIfLonger(message, MAX_SHORT_SUPPORT_MESSAGE_LENGTH);
+
         final int userHandle = mInjector.userHandleGetCallingUserId();
         synchronized (getLockObject()) {
             ActiveAdmin admin = getActiveAdminForUidLocked(who, mInjector.binderGetCallingUid());
@@ -13669,6 +13748,9 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         if (!mHasFeature) {
             return;
         }
+
+        message = truncateIfLonger(message, MAX_LONG_SUPPORT_MESSAGE_LENGTH);
+
         Objects.requireNonNull(who, "ComponentName is null");
         final int userHandle = mInjector.userHandleGetCallingUserId();
         synchronized (getLockObject()) {
@@ -13801,6 +13883,8 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         }
         Objects.requireNonNull(who, "ComponentName is null");
         final int userHandle = mInjector.userHandleGetCallingUserId();
+
+        text = truncateIfLonger(text, MAX_ORG_NAME_LENGTH);
 
         synchronized (getLockObject()) {
             ActiveAdmin admin = getActiveAdminForCallerLocked(who,
@@ -14040,9 +14124,8 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             throw new IllegalArgumentException("ids must not be null");
         }
         for (String id : ids) {
-            if (TextUtils.isEmpty(id)) {
-                throw new IllegalArgumentException("ids must not contain empty string");
-            }
+            Preconditions.checkArgument(!TextUtils.isEmpty(id), "ids must not have empty string");
+            enforceMaxStringLength(id, "affiliation id");
         }
 
         final Set<String> affiliationIds = new ArraySet<>(ids);
@@ -15169,6 +15252,9 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
 
         Objects.requireNonNull(admin, "Admin cannot be null.");
         Objects.requireNonNull(target, "Target cannot be null.");
+        if (bundle != null) {
+            enforceMaxStringLength(bundle, "bundle");
+        }
 
         enforceProfileOrDeviceOwner(admin);
 
@@ -16453,6 +16539,53 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             }
             Slog.d(LOG_TAG, "PO should be able to reset password from direct boot");
             return true;
+        }
+    }
+
+    /**
+     * Truncates char sequence to maximum length, nulls are ignored.
+     */
+    private static CharSequence truncateIfLonger(CharSequence input, int maxLength) {
+        return input == null || input.length() <= maxLength
+                ? input
+                : input.subSequence(0, maxLength);
+    }
+
+    /**
+     * Throw if string argument is too long to be serialized.
+     */
+    private static void enforceMaxStringLength(String str, String argName) {
+        Preconditions.checkArgument(
+                str.length() <= MAX_POLICY_STRING_LENGTH, argName + " loo long");
+    }
+
+    private static void enforceMaxPackageNameLength(String pkg) {
+        Preconditions.checkArgument(
+                pkg.length() <= MAX_PACKAGE_NAME_LENGTH, "Package name too long");
+    }
+
+    /**
+     * Throw if persistable bundle contains any string that we can't serialize.
+     */
+    private static void enforceMaxStringLength(PersistableBundle bundle, String argName) {
+        // Persistable bundles can have other persistable bundles as values, traverse with a queue.
+        Queue<PersistableBundle> queue = new ArrayDeque<>();
+        queue.add(bundle);
+        while (!queue.isEmpty()) {
+            PersistableBundle current = queue.remove();
+            for (String key : current.keySet()) {
+                enforceMaxStringLength(key, "key in " + argName);
+                Object value = current.get(key);
+                if (value instanceof String) {
+                    enforceMaxStringLength((String) value, "string value in " + argName);
+                } else if (value instanceof String[]) {
+                    for (String str : (String[]) value) {
+                        enforceMaxStringLength(str, "string value in " + argName);
+                    }
+                } else if (value instanceof PersistableBundle) {
+                    queue.add((PersistableBundle) value);
+                }
+            }
         }
     }
 }
