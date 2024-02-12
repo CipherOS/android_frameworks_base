@@ -683,10 +683,12 @@ public class FaceService extends SystemService {
             return providers;
         }
 
-        private void addCustomProviders() {
+        private List<CustomFaceProvider> addCustomProviders() {
+            final List<CustomFaceProvider> providers = new ArrayList<>();
             if (CustomFaceProvider.useCustomFaceUnlockService()) {
-                getAidlProviders().add(new CustomFaceProvider(getContext(), new FaceSensorPropertiesInternal(CustomFaceProvider.DEVICE_ID, 0, 1, new ArrayList(), 1, false, false, false), mLockoutResetDispatcher));
+                providers.add(new CustomFaceProvider(getContext(), new FaceSensorPropertiesInternal(CustomFaceProvider.DEVICE_ID, 0, 1, new ArrayList(), 1, false, false, false), mLockoutResetDispatcher));
             }
+            return providers;
         }
 
         @android.annotation.EnforcePermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
@@ -708,7 +710,7 @@ public class FaceService extends SystemService {
                 providers.addAll(getHidlProviders(filteredInstances.first));
                 providers.addAll(getAidlProviders(filteredInstances.second));
                 providers.addAll(getAidlProviders());
-                addCustomProviders();
+                providers.addAll(addCustomProviders());
                 return providers;
             });
         }
