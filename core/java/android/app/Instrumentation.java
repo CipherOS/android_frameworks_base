@@ -61,7 +61,6 @@ import android.view.Window;
 import android.view.WindowManagerGlobal;
 
 import com.android.internal.content.ReferrerIntent;
-import com.android.internal.util.PropImitationHooks;
 
 import java.io.File;
 import java.lang.annotation.Retention;
@@ -71,6 +70,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeoutException;
+
+import com.android.internal.util.custom.PixelPropsUtils;
 
 /**
  * Base class for implementing application instrumentation code.  When running
@@ -1345,7 +1346,8 @@ public class Instrumentation {
         Application app = getFactory(context.getPackageName())
                 .instantiateApplication(cl, className);
         app.attach(context);
-        PropImitationHooks.setProps(app);
+        String packageName = context.getPackageName();
+        PixelPropsUtils.setProps(packageName);
         return app;
     }
     
@@ -1363,7 +1365,8 @@ public class Instrumentation {
             ClassNotFoundException {
         Application app = (Application)clazz.newInstance();
         app.attach(context);
-        PropImitationHooks.setProps(app);
+        String packageName = context.getPackageName();
+        PixelPropsUtils.setProps(packageName);
         return app;
     }
 
