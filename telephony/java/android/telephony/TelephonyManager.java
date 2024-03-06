@@ -12248,6 +12248,20 @@ public class TelephonyManager {
         }
         return null;
     }
+    /**
+     * Restore  getLocaleFromDefaultSim() method for SUW
+     * @hide
+     */
+    public String getLocaleFromDefaultSim() {
+        try {
+            final ITelephony telephony = getITelephony();
+            if (telephony != null) {
+                return telephony.getSimLocaleForSubscriber(getSubId());
+            }
+        } catch (RemoteException ex) {
+        }
+        return null;
+    }
 
     /**
      * Exception that may be supplied to the callback provided in {@link #requestModemActivityInfo}.
@@ -12324,6 +12338,7 @@ public class TelephonyManager {
      *                 with more details about the error.
      * @hide
      */
+
     @SystemApi
     @RequiresPermission(Manifest.permission.MODIFY_PHONE_STATE)
     public void requestModemActivityInfo(@NonNull @CallbackExecutor Executor executor,
