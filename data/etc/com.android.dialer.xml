@@ -15,7 +15,7 @@
   ~ limitations under the License
   -->
 <permissions>
-    <privapp-permissions package="com.android.dialer">
+    <privapp-permissions package="com.cipheros.dialer">
         <permission name="android.permission.ALLOW_ANY_CODEC_FOR_PLAYBACK"/>
         <permission name="android.permission.CONTROL_INCALL_EXPERIENCE"/>
         <permission name="android.permission.GET_ACCOUNTS_PRIVILEGED"/>
