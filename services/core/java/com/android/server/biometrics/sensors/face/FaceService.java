@@ -710,7 +710,6 @@ public class FaceService extends SystemService {
                 final List<ServiceProvider> providers = new ArrayList<>();
                 providers.addAll(getHidlProviders(filteredInstances.first));
                 providers.addAll(getAidlProviders(filteredInstances.second));
-                providers.addAll(getAidlProviders());
                 providers.addAll(addCustomProviders());
                 return providers;
             });
