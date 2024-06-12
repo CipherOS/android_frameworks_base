@@ -26,10 +26,14 @@
         <permission name="android.permission.STATUS_BAR"/>
         <permission name="android.permission.STOP_APP_SWITCHES"/>
         <permission name="android.permission.ACCESS_SHORTCUTS"/>
+<<<<<<< HEAD
         <permission name="android.permission.DEVICE_POWER" />
         <permission name="android.permission.FORCE_STOP_PACKAGES" />
         <permission name="android.permission.INTERACT_ACROSS_USERS"/>
         <permission name="android.permission.INTERACT_ACROSS_USERS_FULL"/>
         <permission name="android.permission.MANAGE_USERS"/>
+=======
+        <permission name="android.permission.ACCESS_HIDDEN_PROFILES_FULL"/>
+>>>>>>> 03ee96228c288f00ffe3e2968eb2b723bd76fd61
     </privapp-permissions>
 </permissions>

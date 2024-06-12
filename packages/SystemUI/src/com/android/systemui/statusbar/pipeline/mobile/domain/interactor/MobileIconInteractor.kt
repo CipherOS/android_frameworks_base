@@ -17,6 +17,7 @@
 package com.android.systemui.statusbar.pipeline.mobile.domain.interactor
 
 import android.content.Context
+import com.android.internal.telephony.flags.Flags
 import com.android.settingslib.SignalIcon.MobileIconGroup
 import com.android.settingslib.graph.SignalDrawable
 import com.android.settingslib.mobile.MobileIconCarrierIdOverrides
@@ -32,14 +33,18 @@ import com.android.systemui.statusbar.pipeline.mobile.domain.model.NetworkTypeIc
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.NetworkTypeIconModel.DefaultIcon
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.NetworkTypeIconModel.OverriddenIcon
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
+import com.android.systemui.statusbar.pipeline.satellite.ui.model.SatelliteIconModel
 import com.android.systemui.statusbar.pipeline.shared.data.model.DataActivityModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -64,6 +69,9 @@ interface MobileIconInteractor {
     /** True if we consider this connection to be in service, i.e. can make calls */
     val isInService: StateFlow<Boolean>
 
+    /** True if this connection is emergency only */
+    val isEmergencyOnly: StateFlow<Boolean>
+
     /** Observable for the data enabled state of this connection */
     val isDataEnabled: StateFlow<Boolean>
 
@@ -78,6 +86,9 @@ interface MobileIconInteractor {
 
     /** Whether or not to show the slice attribution */
     val showSliceAttribution: StateFlow<Boolean>
+
+    /** True if this connection is satellite-based */
+    val isNonTerrestrial: StateFlow<Boolean>
 
     /**
      * Provider name for this network connection. The name can be one of 3 values:
@@ -112,9 +123,6 @@ interface MobileIconInteractor {
      */
     val isRoaming: StateFlow<Boolean>
 
-    /** See [MobileIconsInteractor.isRoamingForceHidden]. */
-    val isRoamingForceHidden: Flow<Boolean>
-
     /** See [MobileIconsInteractor.isForceHidden]. */
     val isForceHidden: Flow<Boolean>
 
@@ -123,18 +131,6 @@ interface MobileIconInteractor {
 
     /** True when in carrier network change mode */
     val carrierNetworkChangeActive: StateFlow<Boolean>
-
-    /** True when VoLTE/VONR available */
-    val isMobileHd: StateFlow<Boolean>
-
-    /** See [MobileIconsInteractor.isMobileHdForceHidden]. */
-    val isMobileHdForceHidden: Flow<Boolean>
-
-    /** True when VoWifi available */
-    val isVoWifi: StateFlow<Boolean>
-
-    /** See [MobileIconsInteractor.isVoWifiForceHidden]. */
-    val isVoWifiForceHidden: Flow<Boolean>
 }
 
 /** Interactor for a single mobile connection. This connection _should_ have one subscription ID */
@@ -151,9 +147,6 @@ class MobileIconInteractorImpl(
     defaultMobileIconGroup: StateFlow<MobileIconGroup>,
     isDefaultConnectionFailed: StateFlow<Boolean>,
     override val isForceHidden: Flow<Boolean>,
-    override val isRoamingForceHidden: Flow<Boolean>,
-    override val isMobileHdForceHidden: Flow<Boolean>,
-    override val isVoWifiForceHidden: Flow<Boolean>,
     connectionRepository: MobileConnectionRepository,
     private val context: Context,
     val carrierIdOverrides: MobileIconCarrierIdOverrides = MobileIconCarrierIdOverridesImpl()
@@ -262,6 +255,13 @@ class MobileIconInteractorImpl(
     override val showSliceAttribution: StateFlow<Boolean> =
         connectionRepository.hasPrioritizedNetworkCapabilities
 
+    override val isNonTerrestrial: StateFlow<Boolean> =
+        if (Flags.carrierEnabledSatelliteFlag()) {
+            connectionRepository.isNonTerrestrial
+        } else {
+            MutableStateFlow(false).asStateFlow()
+        }
+
     override val isRoaming: StateFlow<Boolean> =
         combine(
                 connectionRepository.carrierNetworkChangeActive,
@@ -295,12 +295,7 @@ class MobileIconInteractorImpl(
             }
             .stateIn(scope, SharingStarted.WhileSubscribed(), 0)
 
-    private val numberOfLevels: StateFlow<Int> =
-        connectionRepository.numberOfLevels.stateIn(
-            scope,
-            SharingStarted.WhileSubscribed(),
-            connectionRepository.numberOfLevels.value,
-        )
+    private val numberOfLevels: StateFlow<Int> = connectionRepository.numberOfLevels
 
     override val isDataConnected: StateFlow<Boolean> =
         connectionRepository.dataConnectionState
@@ -308,6 +303,8 @@ class MobileIconInteractorImpl(
             .stateIn(scope, SharingStarted.WhileSubscribed(), false)
 
     override val isInService = connectionRepository.isInService
+
+    override val isEmergencyOnly: StateFlow<Boolean> = connectionRepository.isEmergencyOnly
 
     override val isAllowedDuringAirplaneMode = connectionRepository.isAllowedDuringAirplaneMode
 
@@ -326,43 +323,53 @@ class MobileIconInteractorImpl(
         combine(
                 level,
                 isInService,
-            ) { level, isInService ->
-                if (isInService) level else 0
+                connectionRepository.inflateSignalStrength,
+            ) { level, isInService, inflate ->
+                if (isInService) {
+                    if (inflate) level + 1 else level
+                } else 0
             }
             .stateIn(scope, SharingStarted.WhileSubscribed(), 0)
 
-    private val showRoaming: StateFlow<Boolean> =
+    private val cellularIcon: Flow<SignalIconModel.Cellular> =
         combine(
-                isRoaming,
-                isRoamingForceHidden
-        ) { roaming, roamingForceHidden ->
-            roaming && !roamingForceHidden
-        }
-        .stateIn(scope, SharingStarted.WhileSubscribed(), false)
-
-    override val signalLevelIcon: StateFlow<SignalIconModel> = run {
-        val initial =
-            SignalIconModel(
-                level = shownLevel.value,
-                numberOfLevels = numberOfLevels.value,
-                showExclamationMark = showExclamationMark.value,
-                carrierNetworkChange = carrierNetworkChangeActive.value,
-                showRoaming = showRoaming.value
-            )
-        combine(
+            shownLevel,
+            numberOfLevels,
+            showExclamationMark,
+            carrierNetworkChangeActive,
+        ) { shownLevel, numberOfLevels, showExclamationMark, carrierNetworkChange ->
+            SignalIconModel.Cellular(
                 shownLevel,
                 numberOfLevels,
                 showExclamationMark,
-                carrierNetworkChangeActive,
-                showRoaming
-            ) { shownLevel, numberOfLevels, showExclamationMark, carrierNetworkChange, showRoaming ->
-                SignalIconModel(
-                    shownLevel,
-                    numberOfLevels,
-                    showExclamationMark,
-                    carrierNetworkChange,
-                    showRoaming
-                )
+                carrierNetworkChange,
+            )
+        }
+
+    private val satelliteIcon: Flow<SignalIconModel.Satellite> =
+        shownLevel.map {
+            SignalIconModel.Satellite(
+                level = it,
+                icon = SatelliteIconModel.fromSignalStrength(it)
+                        ?: SatelliteIconModel.fromSignalStrength(0)!!
+            )
+        }
+
+    override val signalLevelIcon: StateFlow<SignalIconModel> = run {
+        val initial =
+            SignalIconModel.Cellular(
+                shownLevel.value,
+                numberOfLevels.value,
+                showExclamationMark.value,
+                carrierNetworkChangeActive.value,
+            )
+        isNonTerrestrial
+            .flatMapLatest { ntn ->
+                if (ntn) {
+                    satelliteIcon
+                } else {
+                    cellularIcon
+                }
             }
             .distinctUntilChanged()
             .logDiffsForTable(
@@ -372,14 +379,4 @@ class MobileIconInteractorImpl(
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), initial)
     }
-
-    override val isMobileHd: StateFlow<Boolean> =
-        connectionRepository.imsState
-            .map { it.isHdVoiceCapable() }
-            .stateIn(scope, SharingStarted.WhileSubscribed(), false)
-
-    override val isVoWifi: StateFlow<Boolean> =
-        connectionRepository.imsState
-            .map { it.isVoWifiAvailable() }
-            .stateIn(scope, SharingStarted.WhileSubscribed(), false)
 }

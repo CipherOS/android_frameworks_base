@@ -45,7 +45,7 @@
     <integer name="navigation_bar_deadzone_orientation">0</integer>
 
     <!-- Whether or not lockscreen shortcuts can be customized -->
-    <bool name="custom_lockscreen_shortcuts_enabled">true</bool>
+    <bool name="custom_lockscreen_shortcuts_enabled">false</bool>
 
     <!-- Whether or not long-pressing on keyguard will display to customize lockscreen -->
     <bool name="long_press_keyguard_customize_lockscreen_enabled">false</bool>
@@ -101,7 +101,7 @@
 
     <!-- Tiles native to System UI. Order should match "quick_settings_tiles_default" -->
     <string name="quick_settings_tiles_stock" translatable="false">
-        internet,wifi,cell,bt,flashlight,dnd,alarm,airplane,nfc,controls,wallet,rotation,battery,cast,screenrecord,mictoggle,cameratoggle,location,hotspot,inversion,saver,dark,work,night,reverse,reduce_brightness,qr_code_scanner,onehanded,color_correction,dream,font_scaling,ambient_display,aod,caffeine,heads_up,reading_mode,sync,powershare,usb_tether
+        internet,bt,flashlight,dnd,alarm,airplane,controls,wallet,rotation,battery,cast,screenrecord,mictoggle,cameratoggle,location,hotspot,inversion,saver,dark,work,night,reverse,reduce_brightness,qr_code_scanner,onehanded,color_correction,dream,font_scaling,record_issue
     </string>
 
     <!-- The tiles to display in QuickSettings -->
@@ -330,7 +330,7 @@
     <string name="config_navBarLayoutHandle" translatable="false">back[70AC];home_handle;ime_switcher[70AC]</string>
 
     <!-- Whether to show a warning notification when device's skin temperature is high. -->
-    <integer name="config_showTemperatureWarning">1</integer>
+    <integer name="config_showTemperatureWarning">0</integer>
 
     <!-- Whether to show a alarm dialog when device's usb port is overheating. -->
     <integer name="config_showUsbPortAlarm">0</integer>
@@ -352,7 +352,7 @@
     <bool name="config_enableNotificationShadeDrag">true</bool>
 
     <!-- Whether to show activity indicators in the status bar -->
-    <bool name="config_showActivity">true</bool>
+    <bool name="config_showActivity">false</bool>
 
     <!-- Whether or not to show the notification shelf that houses the icons of notifications that
      have been scrolled off-screen. -->
@@ -480,9 +480,6 @@
      This name is in the ComponentName flattened format (package/class)  -->
     <string name="config_remoteCopyPackage" translatable="false"></string>
 
-    <!-- On debuggable builds, alert the user if SystemUI PSS goes over this number (in kb) -->
-    <integer name="watch_heap_limit">256000</integer>
-
     <!-- SystemUI Plugins that can be loaded on user builds. -->
     <string-array name="config_pluginAllowlist" translatable="false">
         <item>com.android.systemui</item>
@@ -541,14 +538,23 @@
        -->
     <string translatable="false" name="config_frontBuiltInDisplayCutoutProtection"></string>
 
-    <!--  ID for the camera of outer display that needs extra protection -->
+    <!-- ID for the camera of outer display that needs extra protection -->
     <string translatable="false" name="config_protectedCameraId"></string>
+    <!-- Physical ID for the camera of outer display that needs extra protection -->
+    <string translatable="false" name="config_protectedPhysicalCameraId"></string>
+    <!-- Unique ID of the outer display that contains the camera that needs protection. -->
+    <string translatable="false" name="config_protectedScreenUniqueId"></string>
+
 
     <!-- Similar to config_frontBuiltInDisplayCutoutProtection but for inner display. -->
     <string translatable="false" name="config_innerBuiltInDisplayCutoutProtection"></string>
 
-    <!-- ID for the camera of inner display that needs extra protection -->
+    <!-- ID for the camera of inner display that needs extra protection. -->
     <string translatable="false" name="config_protectedInnerCameraId"></string>
+    <!-- Physical ID for the camera of inner display that needs extra protection -->
+    <string translatable="false" name="config_protectedInnerPhysicalCameraId"></string>
+    <!-- Unique ID of the inner display that contains the camera that needs protection. -->
+    <string translatable="false" name="config_protectedInnerScreenUniqueId"></string>
 
     <!-- Comma-separated list of packages to exclude from camera protection e.g.
     "com.android.systemui,com.android.xyz" -->
@@ -649,8 +655,15 @@
     <!-- Whether to use window background blur for the volume dialog. -->
     <bool name="config_volumeDialogUseBackgroundBlur">false</bool>
 
-    <!-- The properties of the face auth camera in pixels -->
+    <!-- The properties of the face auth front camera for outer display in pixels -->
     <integer-array name="config_face_auth_props">
+        <!-- sensorLocationX -->
+        <!-- sensorLocationY -->
+        <!--sensorRadius -->
+    </integer-array>
+
+    <!-- The properties of the face auth front camera for inner display in pixels -->
+    <integer-array name="config_inner_face_auth_props">
         <!-- sensorLocationX -->
         <!-- sensorLocationY -->
         <!--sensorRadius -->
@@ -845,12 +858,14 @@
     <!-- Icons that don't show in a collapsed non-keyguard statusbar -->
     <string-array name="config_collapsed_statusbar_icon_blocklist" translatable="false">
         <item>@*android:string/status_bar_volume</item>
+        <item>@*android:string/status_bar_alarm_clock</item>
         <item>@*android:string/status_bar_call_strength</item>
     </string-array>
 
     <!-- Icons that don't show in a collapsed statusbar on keyguard -->
     <string-array name="config_keyguard_statusbar_icon_blocklist" translatable="false">
         <item>@*android:string/status_bar_volume</item>
+        <item>@*android:string/status_bar_alarm_clock</item>
         <item>@*android:string/status_bar_call_strength</item>
     </string-array>
 
@@ -959,19 +974,20 @@
     <!-- Whether to show bottom sheets edge to edge -->
     <bool name="config_edgeToEdgeBottomSheetDialog">true</bool>
 
+    <!-- Device specific config that controls whether rest to unlock feature is supported.  -->
+    <bool name="config_restToUnlockSupported">false</bool>
+
     <!--
-    Whether the scene container framework is enabled.
-
-    The scene container framework is a newer (2023) way to organize the various "scenes" between the
-    bouncer, lockscreen, shade, and quick settings.
+    Time in milliseconds the user has to touch the side FPS sensor to successfully authenticate when
+    the screen is turned off with AOD not enabled.
+    TODO(b/302332976) Get this value from the HAL if they can provide an API for it.
     -->
-    <bool name="config_sceneContainerFrameworkEnabled">true</bool>
-
+    <integer name="config_restToUnlockDurationScreenOff">500</integer>
     <!--
     Time in milliseconds the user has to touch the side FPS sensor to successfully authenticate
     TODO(b/302332976) Get this value from the HAL if they can provide an API for it.
     -->
-    <integer name="config_restToUnlockDuration">300</integer>
+    <integer name="config_restToUnlockDurationDefault">300</integer>
 
     <!--
     Width in pixels of the Side FPS sensor.
@@ -980,7 +996,7 @@
 
     <!-- Component name for Home Panel Dream -->
     <string name="config_homePanelDreamComponent" translatable="false">
-        @null
+        com.android.systemui/com.android.systemui.dreams.homecontrols.HomeControlsDreamService
     </string>
 
     <!--
@@ -991,4 +1007,10 @@
         <item>com.android.switchaccess.SwitchAccessService</item>
         <item>com.google.android.apps.accessibility.voiceaccess.JustSpeakService</item>
     </string-array>
+
+    <!--  Whether to use a machine learning model for back gesture falsing. -->
+    <bool name="config_useBackGestureML">true</bool>
+
+    <!-- Whether volume panel should use the large screen layout or not -->
+    <bool name="volume_panel_is_large_screen">false</bool>
 </resources>
